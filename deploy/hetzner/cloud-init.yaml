@@ -1,0 +1,51 @@
+#cloud-config
+# Paste this into "Cloud config" when creating the Hetzner server (Ubuntu 24.04).
+# Replace the ssh_authorized_keys entry with YOUR public key before using it.
+# It creates a non-root user, hardens SSH, enables a firewall and installs the base tooling.
+
+users:
+  - name: kronos
+    groups: [sudo]
+    shell: /bin/bash
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    lock_passwd: true
+    ssh_authorized_keys:
+      - "ssh-ed25519 AAAA...REPLACE_WITH_YOUR_PUBLIC_KEY you@laptop"
+
+package_update: true
+package_upgrade: true
+packages:
+  - git
+  - make
+  - curl
+  - ca-certificates
+  - build-essential
+  - ufw
+  - fail2ban
+  - unattended-upgrades
+  - tmux
+  - htop
+
+write_files:
+  - path: /etc/ssh/sshd_config.d/99-hardening.conf
+    content: |
+      PermitRootLogin no
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      AllowUsers kronos
+
+runcmd:
+  # Firewall: only SSH inbound. Telegram/data APIs are outbound and need no open ports.
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow OpenSSH
+  - ufw --force enable
+  - systemctl enable --now fail2ban
+  - systemctl restart ssh
+  # 4 GB swap as a safety net for torch on 8 GB machines
+  - fallocate -l 4G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+  - echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  # Server clock in UTC; the scheduler converts to exchange time zones itself
+  - timedatectl set-timezone UTC
+  # uv (Python + dependency manager) for the kronos user
+  - su - kronos -c "curl -LsSf https://astral.sh/uv/install.sh | sh"

@@ -1,0 +1,118 @@
+# KronosTrading default configuration.
+# Every instrument, cost and risk parameter is configurable here. Secrets go in .env, never here.
+# Tickers and broker fees marked "verify" MUST be checked against your broker before trusting results.
+
+account:
+  capital: 10000.0            # EUR, used for position sizing
+  base_currency: EUR
+
+risk:
+  risk_per_trade: 100.0       # EUR lost if the stop is hit (before gaps/costs)
+  max_position_pct: 0.40      # cap on a single position's notional as a fraction of capital
+  max_open_risk: 300.0        # sum of open risk across positions (EUR)
+  max_open_positions: 3
+  max_drawdown_kill: 0.10     # stop emitting new entry signals if equity drawdown exceeds 10%
+
+instruments:
+  # data_symbol: ticker at the data source. tv_symbol: TradingView "EXCHANGE:TICKER".
+  # history_proxy: optional longer-history series used ONLY for research, never for live signals.
+  - id: gold_eur
+    name: "Xetra-Gold (physical gold ETC, EUR)"          # verify availability at your broker
+    asset_class: etc
+    data_symbol: "4GLD.DE"
+    tv_symbol: "XETR:4GLD"
+    currency: EUR
+    calendar: XETR
+    broker_profile: myinvestor
+    history_proxy: "GLD"
+  - id: sp500_eur
+    name: "iShares Core S&P 500 UCITS (Acc, EUR)"         # verify
+    asset_class: etf
+    data_symbol: "SXR8.DE"
+    tv_symbol: "XETR:SXR8"
+    currency: EUR
+    calendar: XETR
+    broker_profile: myinvestor
+  - id: msci_world_eur
+    name: "iShares Core MSCI World UCITS (Acc, EUR)"      # verify
+    asset_class: etf
+    data_symbol: "EUNL.DE"
+    tv_symbol: "XETR:EUNL"
+    currency: EUR
+    calendar: XETR
+    broker_profile: myinvestor
+  - id: stoxx600_eur
+    name: "iShares STOXX Europe 600 UCITS (EUR)"          # verify
+    asset_class: etf
+    data_symbol: "EXSA.DE"
+    tv_symbol: "XETR:EXSA"
+    currency: EUR
+    calendar: XETR
+    broker_profile: myinvestor
+    enabled: false
+
+benchmark: sp500_eur          # instrument id used as the buy & hold reference index
+
+# Broker cost profiles. Values are PLACEHOLDERS until verified (verified: false triggers a warning).
+broker_profiles:
+  myinvestor:
+    commission_fixed: 3.0       # EUR per order (verify)
+    commission_pct: 0.0
+    commission_min: 3.0
+    fx_fee_pct: 0.0             # applied only when instrument currency != base currency
+    spread_bps: 10.0            # assumed half-spread paid on each fill
+    slippage_bps: 5.0
+    supports_stop_orders: false # verify: can you place a GTC stop on this instrument?
+    verified: false
+  revolut:
+    commission_fixed: 0.0
+    commission_pct: 0.0025      # verify (plan-dependent, free monthly allowance not modelled)
+    commission_min: 1.0
+    fx_fee_pct: 0.005           # verify
+    spread_bps: 10.0
+    slippage_bps: 5.0
+    supports_stop_orders: false # verify
+    verified: false
+
+data:
+  cache_dir: var/cache
+  timeframe: 1d
+  history_start: "2010-01-01"
+  primary_source: yfinance
+  fallback_sources: [stooq]
+
+kronos:
+  model_id: NeoQuasar/Kronos-small
+  tokenizer_id: NeoQuasar/Kronos-Tokenizer-base
+  # Pinned Hugging Face revisions (same ones used by the official Kronos regression test).
+  model_revision: 901c26c1332695a2a8f243eb2f37243a37bea320
+  tokenizer_revision: 0e0117387f39004a9016484a186a908917e22426
+  max_context: 512
+  lookback: 400
+  temperature: 1.0
+  top_p: 0.9
+  n_paths: 50                 # independent sampled paths (via predict_batch), NOT Kronos' averaged sample_count
+  device: auto                # auto | cpu | cuda:0 | mps
+  seed: 42
+
+signals:
+  horizon: 15                 # forecast bars (trading days)
+  atr_period: 14
+  stop_atr_mult: 2.0
+  min_reward_risk: 1.5
+  min_expected_r: 0.10        # minimum expected value in R after costs
+  max_atr_pct: 0.025          # "slow asset" filter: ATR/close must be below 2.5%
+  stop_mode: close            # close (manual stop on daily close, exit next open) | intraday (broker stop order)
+  entry_expiry_bars: 2
+  max_holding_bars: 15
+
+backtest:
+  walk_forward:
+    train_years: 2
+    test_months: 6
+    step_months: 6
+  holdout_start: "2025-09-01" # untouched final period; also after Kronos' public release (Aug 2025)
+
+alerts:
+  telegram_enabled: false
+  slack_enabled: false
