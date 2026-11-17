@@ -1,6 +1,6 @@
 # Arquitectura de KronosTrading
 
-> Estat: **proposta en revisió.** Les capes de context fonamental i macro (secció 3) estan pendents d'aprovació.
+> Estat: **aprovada en línies generals.** Les capes B i C (secció 3) només es construeixen si la fase 1b demostra que Kronos aporta valor. Les decisions sobre eines externes són a [`TOOLS.md`](TOOLS.md).
 
 ## 1. Objectiu
 
@@ -36,9 +36,17 @@ src/kronostrading/
 
 En el backtest es mesura la contribució de cada capa per separat: setup sol, setup + Kronos, Kronos sol, i amb o sense règim.
 
+**Dos modes d'estratègia** (es comparen a la fase 1b):
+
+- **A. Timing d'un sol actiu:** entrar o no en un instrument concret, per exemple l'ETC d'or.
+- **B. Rotació entre ETF:** ordenar un univers d'uns 20–30 ETF UCITS sectorials i de països segons el retorn previst i quedar-se amb els 2 o 3 millors. És l'ús que el paper de Kronos valida (RankIC).
+
 ## 4. Regles metodològiques
 
-- Decisió al tancament de t, execució a l'obertura de t+1. Test que "contamina" les dades posteriors a t.
+- Decisió al tancament de t, execució a l'obertura de t+1.
+- **Test de look-ahead:** el senyal a t no canvia si les dades posteriors a t es "contaminen".
+- **Test recursiu:** el senyal no canvia segons quant històric es carregui abans de la finestra.
+- **Fase 1b, criteri de decisió fixat per endavant:** si Kronos no supera el naive amb significació estadística (encert direccional, calibració o rànquing) i no millora el setup tècnic sol, queda com a filtre secundari o fora, i el sistema passa a ser tècnic i de momentum.
 - Walk-forward: ajust en la finestra d'entrenament i aplicació fora de mostra. Tram final reservat a partir del 2025-09 (posterior a la publicació de Kronos).
 - Dades macro i fonamentals **point-in-time**, amb el retard de publicació aplicat. Si no hi ha historial point-in-time, la capa s'usa només en directe i no es reivindica cap resultat de backtest per a ella.
 - Comparativa obligatòria: naive, SMA, buy & hold de l'actiu i de l'índex.
@@ -48,7 +56,20 @@ En el backtest es mesura la contribució de cada capa per separat: setup sol, se
 
 VPS a Hetzner (CPU, Ubuntu 24.04) per a dades, senyals i avisos. GPU llogada per hores per precalcular les previsions històriques; els resultats es desen en Parquet i es pugen al VPS. Vegeu [`deploy/hetzner/README.md`](../deploy/hetzner/README.md).
 
-## 6. Fets de Kronos que condicionen el disseny
+**TradingView (pla gratuït):** molt poques alertes actives i cap webhook. Els avisos van per Telegram i les alertes de TV es reserven per als stops de les posicions obertes. Tota la lògica tècnica va en un sol indicador Pine.
+
+## 6. Full de ruta
+
+| Fase | Contingut | Atura't i revisa |
+|---|---|---|
+| 0 | Esquelet, configuració, servidor Hetzner | ✅ |
+| 1 | Dades (Yahoo/Stooq, cache, calendari), wrapper de Kronos multicamí, baselines, tests de look-ahead i recursiu, gràfic de previsió | ✔ |
+| 1b | **Viabilitat:** modes A i B contra naive, momentum i buy & hold; calibració; decisió segons el criteri fixat | ✔ (decisió) |
+| 2 | Setup tècnic, règim macro (FRED), esdeveniments, backtest walk-forward amb costos, informe quantstats, indicador Pine | ✔ |
+| 3 | Risc, cartera ombra, diari, Telegram, treball diari al servidor | ✔ |
+| 4 | Opcional: fine-tuning de Kronos | ✔ |
+
+## 7. Fets de Kronos que condicionen el disseny
 
 Vegeu els detalls a `third_party/Kronos/model/kronos.py` (commit `67b630e`):
 

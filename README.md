@@ -10,7 +10,8 @@ Sistema d'**avisos de swing trading** (espelmes diàries) per a ETF, ETC i accio
 |---|---|---|
 | 0 | Esquelet, configuració i servidor Hetzner | ✅ |
 | 1 | Dades, wrapper de Kronos, gràfic de previsió | ⏳ |
-| 2 | Backtest walk-forward i informe | — |
+| 1b | Viabilitat de Kronos (timing vs rotació d'ETF), decisió segons un criteri fixat per endavant | — |
+| 2 | Setup tècnic, règim macro, backtest walk-forward i informe | — |
 | 3 | Risc, cartera ombra, diari, Telegram, treball diari | — |
 | 4 | Fine-tuning (opcional) | — |
 
